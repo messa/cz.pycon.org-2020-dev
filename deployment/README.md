@@ -5,8 +5,8 @@ Deployment
 - beta: [pyconcz-beta.messa.cz](https://pyconcz-beta.messa.cz)
 
 
-Server
-======
+Server setup
+============
 
 Currently running on a [DigitalOcean](https://m.do.co/c/389daec654bc) VM.
 
@@ -22,3 +22,10 @@ $ sudo ansible-pull \
     --verbose \
     deployment/playbook_server_setup.yml
 ```
+
+Next, the websites can be deployment by running the scripts created by the `playbook_server_setup.yml` above:
+
+- `sudo /srv/deploy_pyconcz_2020_beta.sh`
+- `sudo /srv/deploy_pyconcz_2020_prod.sh`
+
+The operating system user `pyconcz-github` has SSH allowed_keys set up so the website deploy scripts can be run through **Github Actions**.
