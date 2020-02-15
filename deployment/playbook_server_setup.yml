@@ -73,7 +73,7 @@
         sudo flock /tmp/beta-lock \
           ansible-pull \
           --url https://github.com/messa/cz.pycon.org-2020-dev.git \
-          --checkout beta/ \
+          --checkout beta \
           deployment/playbook_deploy_beta.yml
 
         sudo flock /tmp/beta-lock \
