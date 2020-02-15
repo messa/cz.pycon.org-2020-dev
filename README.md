@@ -1,7 +1,7 @@
-PyConCZ 2019
+PyConCZ 2020
 ============
 
-PyCon CZ taking place in Ostrava for its fifth edition.
+PyCon CZ taking place in Ostrava for its sixth edition.
 
 Contributing
 ------------
@@ -91,7 +91,7 @@ Old files are automatically replaced.
 
 ### Deployment
 
-Just use `fab production deploy` to deploy to production or `fab beta deploy` to deploy to beta site.
+Changes are deployed automatically via Github Actions after every push to _master_ or _beta_ branch.
 
 License
 -------
