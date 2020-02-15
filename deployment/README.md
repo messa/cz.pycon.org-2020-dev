@@ -29,3 +29,9 @@ Next, the websites can be deployment by running the scripts created by the `play
 - `sudo /srv/deploy_pyconcz_2020_prod.sh`
 
 The operating system user `pyconcz-github` has SSH allowed_keys set up so the website deploy scripts can be run through **Github Actions**.
+
+
+Firewall
+========
+
+The server is protected by firewall managed by DigitalOcean outside of the VM (Droplet) itself. Only ports 22, 25, 80, 443 are accessible from the Internet.
