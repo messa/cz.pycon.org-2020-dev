@@ -20,7 +20,7 @@ jobs:
 
     - name: Run deploy script
       run: |
-        echo ssh \
+        ssh \
           -l pyconcz-github \
           -i ssh-key \
           -o StrictHostKeyChecking=no \
