@@ -1,8 +1,8 @@
 Deployment
 ==========
 
-- produkce: [pyconcz-prod.messa.cz](pyconcz-prod.messa.cz)
-- beta: [pyconcz-beta.messa.cz](https://pyconcz-beta.messa.cz)
+- produkce: [pyconcz-prod.messa.cz](http://pyconcz-prod.messa.cz)
+- beta: [pyconcz-beta.messa.cz](http://pyconcz-beta.messa.cz)
 
 
 Server setup
