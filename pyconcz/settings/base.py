@@ -25,7 +25,7 @@ ADMINS = [
 DEFAULT_FROM_EMAIL = 'admin@pycon.cz'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = bool(os.environ.get('DEBUG'))
 
 SITE_ID = 1
 
