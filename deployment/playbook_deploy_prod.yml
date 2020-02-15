@@ -1,0 +1,166 @@
+- hosts: localhost
+  tasks:
+
+  - name: Directory /srv/pyconcz-2020-prod
+    file:
+      path: /srv/pyconcz-2020-prod
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-prod/scripts
+    file:
+      path: /srv/pyconcz-2020-prod/scripts
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-prod/conf
+    file:
+      path: /srv/pyconcz-2020-prod/conf
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-prod/credentials
+    file:
+      path: /srv/pyconcz-2020-prod/credentials
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-prod/static
+    file:
+      path: /srv/pyconcz-2020-prod/static
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-prod/media
+    file:
+      path: /srv/pyconcz-2020-prod/media
+      state: directory
+      owner: 1100
+
+  - name: Django configuration file /srv/pyconcz-2020-prod/conf/local.py
+    copy:
+      dest: /srv/pyconcz-2020-prod/conf/local.py
+      mode: '0750'
+      owner: 0
+      group: 1100
+      content: |
+        # Django configuration file
+        from .base import *
+        SECRET_KEY = {{ lookup('password', '/srv/pyconcz-2020-prod/credentials/django_secret_key chars=ascii_letters,digits')|tojson }}
+        ALLOWED_HOSTS = [
+            'cz.pycon.org',  # main site
+            'pyconcz-prod.messa.cz',
+        ]
+        MEDIA_ROOT = '/media'
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql_psycopg2',
+                'NAME': 'pyconcz2020prod',
+                'USER': 'pyconcz2020prod',
+                'PASSWORD': {{ lookup('password', '/srv/pyconcz-2020-prod/credentials/postgresql_pycon2020prod_password chars=ascii_letters,digits')|tojson }},
+                'HOST': 'db',
+                'ATOMIC_REQUESTS': True,
+                'CONN_MAX_AGE': 1800,
+            },
+        }
+        CACHES = {
+            'default': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': 'redis://redis:6379/1',
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                }
+            }
+        }
+        SLACK_WEBHOOK = ''  # Webhook URL for slack CFP notifications
+        TITO_SECRET_KEY = ''  # Secret key to access TITO API.
+        TITO_EVENT_NAME = 'pycon-cz-2020'  # Name of the event TITO service
+        TITO_ACCOUNT_NAME = 'pyvec'  # Name of the TITO account
+
+  - docker_container:
+      name: pyconcz-2020-prod-redis
+      image: "redis:latest"
+      restart: yes
+
+  - docker_container:
+      name: pyconcz-2020-prod-db
+      image: "postgres:12"
+      volumes:
+      - "/srv/pyconcz-2020-prod/db_data:/var/lib/postgresql/data"
+      env:
+        POSTGRES_USER: pyconcz2020prod
+        POSTGRES_DB: pyconcz2020prod
+        POSTGRES_PASSWORD: "{{ lookup('password', '/srv/pyconcz-2020-prod/credentials/postgresql_pycon2020prod_password chars=ascii_letters,digits') }}"
+      ports:
+        - "2432:5432"
+      restart: yes
+
+  - docker_container:
+      name: pyconcz-2020-prod-adminer
+      image: "adminer:latest"
+      links:
+      - "pyconcz-2020-prod-db:db"
+      ports:
+      - "8280:8080"
+      restart: yes
+
+  - copy:
+      dest: /srv/pyconcz-2020-prod/scripts/deploy_web.sh
+      mode: '0755'
+      content: |
+        #!/bin/bash
+        set -ex
+        test -d /srv/pyconcz-2020-prod/src || git clone https://github.com/messa/cz.pycon.org-2020-dev.git /srv/pyconcz-2020-prod/src
+        cd /srv/pyconcz-2020-prod/src
+        git fetch
+        git checkout master
+        git reset --hard origin/master
+        docker build --pull --tag pyconcz-2020-prod-web .
+        docker stop pyconcz-2020-prod-web || true
+        docker rm pyconcz-2020-prod-web || true
+        docker run --rm \
+          pyconcz-2020-prod-web \
+          tar -c -C /app/static .  \
+          | tar -x -C /srv/pyconcz-2020-prod/static
+        docker run -d \
+          --name pyconcz-2020-prod-web \
+          --link pyconcz-2020-prod-db:db \
+          --link pyconcz-2020-prod-redis:redis \
+          --volume /srv/pyconcz-2020-prod/conf/local.py:/app/pyconcz/settings/local.py \
+          --volume /srv/pyconcz-2020-prod/static:/app/static \
+          --volume /srv/pyconcz-2020-prod/media:/media \
+          -p 8200:8000  \
+          pyconcz-2020-prod-web
+        systemctl reload nginx
+
+  - copy:
+      dest: /etc/nginx/sites-enabled/pyconcz-prod.messa.cz
+      content: |
+        server {
+          listen 80;
+          server_name pyconcz-prod.messa.cz;
+          location / {
+            proxy_pass http://172.17.0.1:8200;
+            proxy_set_header Host      $host;
+            proxy_set_header X-Real-IP $remote_addr;
+          }
+          location /2020/static/ {
+            alias /srv/pyconcz-2020-prod/static/;
+          }
+          location /2019/ {
+            proxy_pass http://185.58.41.93;
+            proxy_set_header Host      cz.pycon.org;
+            proxy_set_header X-Real-IP $remote_addr;
+          }
+          location /2018/ {
+            alias /srv/pyconcz-2020-prod/src/2018/;
+            index index.html;
+          }
+          location /2017/ {
+            alias /srv/pyconcz-2020-prod/src/2017/;
+            index index.html;
+          }
+          location /2016/ {
+            alias /srv/pyconcz-2020-prod/src/2016/;
+            index index.html;
+          }
+          location /2015/ {
+            alias /srv/pyconcz-2020-prod/src/2015/;
+            index index.html;
+          }
+        }

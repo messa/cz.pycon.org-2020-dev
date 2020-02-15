@@ -1,0 +1,27 @@
+name: Deploy beta
+
+on: [ push: { branches: [ beta ] } ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Prepare SSH key
+      run: |
+        echo "$SSH_KEY" > ssh-key
+        chmod go-rwx ssh-key
+        ls -lh ssh-key
+      env:
+        SSH_KEY: ${{ secrets.pyconcz_github_ssh_key_deploy_beta }}
+
+    - name: Run deploy script
+      run: |
+        echo ssh \
+          -l pyconcz-github \
+          -i ssh-key \
+          -o StrictHostKeyChecking=no \
+          pyconcz-beta.messa.cz \
+          "sudo /home/pyconcz-github/deploy_pyconcz_2020_prod_action.sh"

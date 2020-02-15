@@ -171,8 +171,8 @@ FORMAT_MODULE_PATH = [
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
-STATIC_URL = '/2019/static/'
-STATIC_ROOT = os.path.join(TMP_DIR, 'static')
+STATIC_URL = '/2020/static/'
+STATIC_ROOT = os.environ.get('STATIC_ROOT') or os.path.join(TMP_DIR, 'static')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
@@ -211,3 +211,19 @@ OTHER_ROOMS = [
 ALL_ROOMS = TALKS_ROOMS + WORKSHOPS_ROOMS + SPRINT_ROOMS + OTHER_ROOMS
 
 ALL_ROOMS_DICT = dict(ALL_ROOMS)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
+        },
+    },
+}

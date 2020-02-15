@@ -1,0 +1,101 @@
+- hosts: localhost
+  tasks:
+
+  - name: Install basic packages
+    apt:
+      pkg: [ gnupg2, curl, htop, dstat, man-db, tmux, rsync, tree, vim, sudo, figlet, netcat ]
+      state: present
+      install_recommends: no
+
+  - name: Set vim as default editor
+    command: update-alternatives --set editor /usr/bin/vim.basic
+
+  - name: Docker apt key
+    apt_key:
+      id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
+
+  - name: Docker apt repository
+    apt_repository:
+      repo: "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"
+      state: present
+      filename: docker
+      update_cache: true
+
+  - name: Install Docker
+    apt:
+      pkg: [ docker-ce, docker-ce-cli, containerd.io, python3-docker ]
+      state: present
+
+  - name: Install Nginx
+    apt:
+      pkg: nginx
+      state: present
+
+  - name: User pyconcz
+    user:
+      name: pyconcz
+      uid: 1100
+      groups: sudo,adm
+
+  - name: User pyconcz-github
+    user:
+      name: pyconcz-github
+      uid: 1101
+
+  - name: Directory /home/pyconcz-github/.ssh
+    file:
+      path: /home/pyconcz-github/.ssh
+      state: directory
+
+  - name: File /home/pyconcz-github/.ssh/authorized_keys
+    copy:
+      dest: /home/pyconcz-github/.ssh/authorized_keys
+      content: |
+        no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty,command="sudo /srv/deploy_pyconcz_2020_beta.sh" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC+4UXtubHA+QbxQBQDj9LE82cbm8QAvr2SpVKR6Vemp758LCPpaGmfRNl3GPCsQ7bi9+K2uxwiNwGo76a9TW3fAi7JS8qkd6OGb3jsxaZHuFd5eE48YnwApF149WBv41ZekAoy3VafnH68e0ZIV2Vpqvp1ZXPL6TwlLlHMzqYhzg2jehdqyxVcYdJFKPKpQN+enh0BRysBFAHnv0ip/LCPJ7xW/WFseu+br+F4XJs2zVOzLD+nn6pZGU7KzhWZJBR6GtjlJTVn4T+aAESkzQPMAQ7E68UTUIje8WS6dW6KispKUwpT9jZAl77RnUUi1wRC7sl8rnLS9251qyop8mKDuKJUMuGkut/QhB+0tslIQVa7WpkhBTwvw2tLgsExdUemG+N2Gq6CNztGu2+9LgxFGX+e10u28ABegm3b9376fRNpwQZmHrLGQRRg7Pax6R1aR0jlPH9ufrEpC6FDTB1h3T+PqPa9SGJ+t6NGlUgIqd8VZJi7GtfUdqbMZnvY4d9GLLfjiF3MWKTfZSDpeaALOcXc+o3REiKozIE26+H+Uy+nKxvhMGoLtFQb3y6IvrEeYR1dweQSj9elxRA5U9/OFvsRMv1bECRrcI+Q6v0cy0Q7llD3SvYsdz2U3sG495HsmDVYD42MKTKYkTRG0Qxyb2fHkDXcSdCYKZVn/Mj7qQ==
+        no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty,command="sudo /srv/deploy_pyconcz_2020_prod.sh" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDdaozvxtEh9RIlIRPYXVbQo+K3o/70u4d35m/KPZXEFINpO4NmHVoNQ/5mVTabj9Rx1C9MADZmHQO+GPaYi81fLqY5eX4Qo1U9Jwg0d72ry9/g/gwbo3NQzn83+aZni9uWB+ZHeMj24h6WnjEWH25lgnjI4vf+qXmQeBVuej4WRDrXBxE3ypvZ7oD8LviBZLQnAmsWa4EgU36a//44+MJaRo21IS4nIBT7gXc/GXO++WbZ417WV7sBmgKib5zbvF9dRrUaMzmbPrf73gAJEVYo3ORF8G4/Si66oUV/EovipZ0ZRQnfFxOMTilsdTSwHzUpdVfJazs31E4HIKYPLV17dAp6Z+GqLM79MbyVQdf7OHGLE0d3zJsdBBRei54qMFN7iq/BjPpVzFwXJ1GCeu0saleMZKf/R0oVvKpassg7thHCXNwZ86iDRyDIbpRJfXReRp4rRYfXlfQkJh1b8es7qVrwIabn9f1tdUuU3jZfPMytIYAW7u8d0PKFLY9bqKLJVWKCL5+QbFGJF32iM0ZEkC+oOOIMvzGnI1Q2UZYYnheoemnugX5SLDC95NMYV3Mfz47/4/pVv2SXLPoLf9wxBCwMGm2Z7kz/5m+EI5DgnurmRmgHUnmsrEx8V0102QspFgZUyoRcfI6ONnT6pKOdh6QePKURTwQ8TqmLQPYnNQ==
+
+  - name: Enable sudo /srv/deploy_pyconcz_2020_beta.sh via sudoaers
+    copy:
+      dest: /etc/sudoers.d/pyconcz-github_deploy_pyconcz_2020_beta
+      content: |
+        pyconcz-github ALL = NOPASSWD: /srv/deploy_pyconcz_2020_beta.sh, /srv/deploy_pyconcz_2020_prod.sh
+
+  - name: Deploy beta script to be called from Github action
+    copy:
+      dest: /srv/deploy_pyconcz_2020_beta.sh
+      mode: '0755'
+      content: |
+        #!/bin/bash
+        set -ex
+
+        sudo flock /tmp/beta-lock \
+          ansible-pull \
+          --url https://github.com/messa/cz.pycon.org-2020-dev.git \
+          --checkout beta/ \
+          deployment/playbook_deploy_beta.yml
+
+        sudo flock /tmp/beta-lock \
+          /srv/pyconcz-2020-beta/scripts/deploy_web.sh
+
+        sudo docker ps -a
+
+  - name: Deploy prod script to be called from Github action
+    copy:
+      dest: /srv/deploy_pyconcz_2020_prod.sh
+      mode: '0755'
+      content: |
+        #!/bin/bash
+        set -ex
+
+        sudo flock /tmp/beta-lock \
+          ansible-pull \
+          --url https://github.com/messa/cz.pycon.org-2020-dev.git \
+          --checkout master \
+          deployment/playbook_deploy_prod.yml
+
+        sudo flock /tmp/beta-lock \
+          /srv/pyconcz-2020-prod/scripts/deploy_web.sh
+
+        sudo docker ps -a

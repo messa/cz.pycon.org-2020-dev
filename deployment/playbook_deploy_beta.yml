@@ -1,0 +1,167 @@
+- hosts: localhost
+  tasks:
+
+  - name: Directory /srv/pyconcz-2020-beta
+    file:
+      path: /srv/pyconcz-2020-beta
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-beta/scripts
+    file:
+      path: /srv/pyconcz-2020-beta/scripts
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-beta/conf
+    file:
+      path: /srv/pyconcz-2020-beta/conf
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-beta/credentials
+    file:
+      path: /srv/pyconcz-2020-beta/credentials
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-beta/static
+    file:
+      path: /srv/pyconcz-2020-beta/static
+      state: directory
+
+  - name: Directory /srv/pyconcz-2020-beta/media
+    file:
+      path: /srv/pyconcz-2020-beta/media
+      state: directory
+      owner: 1100
+
+  - name: Django configuration file /srv/pyconcz-2020-beta/conf/local.py
+    copy:
+      dest: /srv/pyconcz-2020-beta/conf/local.py
+      mode: '0750'
+      owner: 0
+      group: 1100
+      content: |
+        # Django configuration file
+        from .base import *
+        SECRET_KEY = {{ lookup('password', '/srv/pyconcz-2020-beta/credentials/django_secret_key chars=ascii_letters,digits')|tojson }}
+        ALLOWED_HOSTS = [
+            'cz.pycon.org',  # main site
+            'pyconcz-beta.messa.cz',
+        ]
+        MEDIA_ROOT = '/media'
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql_psycopg2',
+                'NAME': 'pyconcz2020beta',
+                'USER': 'pyconcz2020beta',
+                'PASSWORD': {{ lookup('password', '/srv/pyconcz-2020-beta/credentials/postgresql_pycon2020beta_password chars=ascii_letters,digits')|tojson }},
+                'HOST': 'db',
+                'ATOMIC_REQUESTS': True,
+                'CONN_MAX_AGE': 1800,
+            },
+        }
+        CACHES = {
+            'default': {
+                'BACKEND': 'django_redis.cache.RedisCache',
+                'LOCATION': 'redis://redis:6379/1',
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                }
+            }
+        }
+        SLACK_WEBHOOK = ''  # Webhook URL for slack CFP notifications
+        TITO_SECRET_KEY = ''  # Secret key to access TITO API.
+        TITO_EVENT_NAME = 'pycon-cz-2020'  # Name of the event TITO service
+        TITO_ACCOUNT_NAME = 'pyvec'  # Name of the TITO account
+
+  - docker_container:
+      name: pyconcz-2020-beta-redis
+      image: "redis:latest"
+      restart: yes
+
+  - docker_container:
+      name: pyconcz-2020-beta-db
+      image: "postgres:12"
+      volumes:
+      - "/srv/pyconcz-2020-beta/db_data:/var/lib/postgresql/data"
+      env:
+        POSTGRES_USER: pyconcz2020beta
+        POSTGRES_DB: pyconcz2020beta
+        POSTGRES_PASSWORD: "{{ lookup('password', '/srv/pyconcz-2020-beta/credentials/postgresql_pycon2020beta_password chars=ascii_letters,digits') }}"
+      ports:
+        - "1432:5432"
+      restart: yes
+
+  - docker_container:
+      name: pyconcz-2020-beta-adminer
+      image: "adminer:latest"
+      links:
+      - "pyconcz-2020-beta-db:db"
+      ports:
+      - "8180:8080"
+      restart: yes
+
+  - copy:
+      dest: /srv/pyconcz-2020-beta/scripts/deploy_web.sh
+      mode: '0755'
+      content: |
+        #!/bin/bash
+        set -ex
+        test -d /srv/pyconcz-2020-beta/src || git clone https://github.com/messa/cz.pycon.org-2020-dev.git /srv/pyconcz-2020-beta/src
+        cd /srv/pyconcz-2020-beta/src
+        git fetch
+        git checkout beta
+        git reset --hard origin/beta
+        docker build --pull --tag pyconcz-2020-beta-web .
+        docker stop pyconcz-2020-beta-web || true
+        docker rm pyconcz-2020-beta-web || true
+        docker run --rm \
+          pyconcz-2020-beta-web \
+          tar -c -C /app/static .  \
+          | tar -x -C /srv/pyconcz-2020-beta/static
+        docker run -d \
+          --name pyconcz-2020-beta-web \
+          --link pyconcz-2020-beta-db:db \
+          --link pyconcz-2020-beta-redis:redis \
+          --volume /srv/pyconcz-2020-beta/conf/local.py:/app/pyconcz/settings/local.py \
+          --volume /srv/pyconcz-2020-beta/static:/app/static \
+          --volume /srv/pyconcz-2020-beta/media:/media \
+          -p 8100:8000  \
+          pyconcz-2020-beta-web
+        systemctl reload nginx
+
+  - copy:
+      dest: /etc/nginx/sites-enabled/pyconcz-beta.messa.cz
+      content: |
+        server {
+          listen 80;
+          server_name pyconcz-beta.messa.cz;
+          location / {
+            proxy_pass http://172.17.0.1:8100;
+            proxy_set_header Host      $host;
+            proxy_set_header X-Real-IP $remote_addr;
+          }
+          location /2020/static/ {
+            alias /srv/pyconcz-2020-beta/static/;
+          }
+          location /2019/ {
+            # proxy_pass http://pycon-beta-2174.rostiapp.cz;
+            proxy_pass http://185.58.41.93;
+            proxy_set_header Host      pycon-beta-2174.rostiapp.cz;
+            proxy_set_header X-Real-IP $remote_addr;
+          }
+          location /2018/ {
+            alias /srv/pyconcz-2020-beta/src/2018/;
+            index index.html;
+          }
+          location /2017/ {
+            alias /srv/pyconcz-2020-beta/src/2017/;
+            index index.html;
+          }
+          location /2016/ {
+            alias /srv/pyconcz-2020-beta/src/2016/;
+            index index.html;
+          }
+          location /2015/ {
+            alias /srv/pyconcz-2020-beta/src/2015/;
+            index index.html;
+          }
+        }

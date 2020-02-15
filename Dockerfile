@@ -33,7 +33,8 @@ COPY pyconcz ./pyconcz
 COPY manage.py app.py docker_entrypoint.sh ./
 COPY --from=npm /app/pyconcz/static ./pyconcz/static
 
-RUN python manage.py collectstatic --no-input --link
+ENV STATIC_ROOT=/app/static
+RUN python manage.py collectstatic --no-input
 
 RUN groupadd --gid 1100 app && useradd --system --gid 1100 --uid 1100 --shell /usr/sbin/nologin app
 
