@@ -135,15 +135,30 @@
           listen 80;
           server_name pyconcz-prod.messa.cz;
           location / {
+            return 302 https://$host$request_uri;
+          }
+          location /.well-known/ {
+            alias /var/www/html/.well-known/;
+          }
+        }
+        server {
+          listen 443 ssl;
+          server_name pyconcz-prod.messa.cz;
+          ssl_certificate /etc/letsencrypt/live/pyconcz-prod.messa.cz/fullchain.pem;
+          ssl_certificate_key /etc/letsencrypt/live/pyconcz-prod.messa.cz/privkey.pem;
+          location / {
             proxy_pass http://172.17.0.1:8200;
             proxy_set_header Host      $host;
             proxy_set_header X-Real-IP $remote_addr;
+          }
+          location /.well-known/ {
+            alias /var/www/html/.well-known/;
           }
           location /2020/static/ {
             alias /srv/pyconcz-2020-prod/static/;
           }
           location /2019/ {
-            proxy_pass http://185.58.41.93;
+            proxy_pass https://185.58.41.93;
             proxy_set_header Host      cz.pycon.org;
             proxy_set_header X-Real-IP $remote_addr;
           }
