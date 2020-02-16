@@ -23,8 +23,8 @@ class Ranking(models.Model):
 
 
 class Score(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    ranking = models.ForeignKey(Ranking, related_name='scores')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    ranking = models.ForeignKey(Ranking, related_name='scores', on_delete=models.PROTECT)
 
     value = models.DecimalField(max_digits=2,
                                 decimal_places=1,

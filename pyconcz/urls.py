@@ -3,6 +3,7 @@ from django.conf.urls import include, url
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.views.generic import TemplateView, RedirectView
+from django.urls import path
 
 from pyconcz.common.views import homepage
 
@@ -14,7 +15,7 @@ prefixed_urlpatterns = [
     url(r'^announcements/', include('pyconcz.announcements.urls')),
     url(r'^sponsors/', include('pyconcz.sponsors.urls')),
     url(r'^tickets/', include('pyconcz.common.urls')),
-    url(r'^intermission/', include('pyconcz.intermission.urls', namespace='intermission')),
+    url(r'^intermission/', include(('pyconcz.intermission.urls', 'intermission'), namespace='intermission')),
 
     # static pages
     url(r'^coc/$', TemplateView.as_view(template_name='pages/coc.html'), name='coc'),
@@ -44,7 +45,7 @@ urlpatterns = (
         [
             url(r'^coc/$', RedirectView.as_view(url='/2020/coc/')),
             url(r'^2020/', include(prefixed_urlpatterns)),
-            url(r'^admin/', include(admin.site.urls)),
+            path('admin/', admin.site.urls),
             url(r'^$', RedirectView.as_view(url='/2020/')),
         ]
 )

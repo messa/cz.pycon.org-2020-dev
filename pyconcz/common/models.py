@@ -14,6 +14,7 @@ class Phase(models.Model):
     override = models.ForeignKey(
         'common.PhaseValue', null=True, blank=True,
         related_name='overriden_in',
+        on_delete=models.SET_NULL,
     )
 
     @cached_property
@@ -72,7 +73,7 @@ class Phase(models.Model):
 
 @functools.total_ordering
 class PhaseValue(models.Model):
-    phase = models.ForeignKey(Phase, related_name='values')
+    phase = models.ForeignKey(Phase, related_name='values', on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
     active_since = models.DateTimeField(null=True, blank=True)
     enabled = models.BooleanField(default=True)
