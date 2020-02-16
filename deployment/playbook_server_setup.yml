@@ -57,7 +57,7 @@
           }
         }
 
-  - name: Comment ssl_* in /etc/nginx/nginx.conf
+  - name: Comment out ssl_* in /etc/nginx/nginx.conf
     replace:
       path: /etc/nginx/nginx.conf
       regexp: '^([ \t]+)(ssl_.*)'
@@ -79,6 +79,20 @@
 
         ssl_session_cache shared:SSL:50m;
         ssl_session_timeout 30m;
+
+  - name: Directory /var/www/html/.well-known
+    file:
+      path: /var/www/html/.well-known
+      state: directory
+
+  - name: security.txt
+    copy:
+      dest: /var/www/html/.well-known/security.txt
+      content: |
+        Contact: mailto:petr.messner@gmail.com
+        Contact: https://twitter.com/messa_en
+        Contact: mailto:info@pycon.cz
+        Preferred-Languages: en, cs
 
   - name: User pyconcz
     user:
