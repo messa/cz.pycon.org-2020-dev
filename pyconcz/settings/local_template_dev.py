@@ -31,8 +31,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'HOST': '127.0.0.1',
-        'NAME': 'pycon2019',
-        'USER': 'pycon2019',
+        'NAME': 'pycon2020',
+        'USER': 'pycon2020',
         'PASSWORD': '',  # fill in please
         'PORT': 5432,
     }
@@ -50,5 +50,5 @@ STATICFILES_DIRS = [
 SLACK_WEBHOOK = ''  # Webhook URL for slack CFP notifications
 
 TITO_ACCOUNT_NAME = 'pyvec'
-TITO_EVENT_NAME = 'pycon-cz-2019'
+TITO_EVENT_NAME = 'pycon-cz-2020'
 TITO_SECRET_KEY = 'ti.to-secret-key-here'
